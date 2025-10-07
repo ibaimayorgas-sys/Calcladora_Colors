@@ -1,490 +1,697 @@
-import React, { useState, useMemo } from 'react';
-import { Settings, CheckCircle, ArrowRightLeft, Info, Code, XCircle } from 'lucide-react';
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Calculadora Visual — Codi de Colors dels Resistors (4 bandes)</title>
+<style>
+/* ---------------------------
+   RESET & BASE
+   --------------------------- */
+:root{
+  --bg-1: #071226;
+  --bg-2: #071a2d;
+  --glass: rgba(255,255,255,0.03);
+  --card: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  --muted: #9fb0c8;
+  --accent: linear-gradient(90deg,#4f46e5,#06b6d4);
+  --accent-solid: #4f46e5;
+  --accent-2: #06b6d4;
+  --radius: 14px;
+  --glass-2: rgba(255,255,255,0.02);
+  --glass-3: rgba(255,255,255,0.015);
+  --soft: rgba(255,255,255,0.04);
+  font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background: radial-gradient(1200px 600px at 10% 10%, #072034 0%, rgba(7,18,36,0) 20%), linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color:#e6f0fb;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  padding:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 
-// Data structure based on the user's uploaded image (Catalan language)
+/* ---------------------------
+   LAYOUT
+   --------------------------- */
+.app{
+  width:100%;
+  max-width:1200px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns: 1fr 380px;
+  gap:20px;
+}
+@media (max-width:1050px){
+  .app{grid-template-columns:1fr; padding:12px}
+}
+
+.header{
+  grid-column: 1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.brand{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}
+.logo{
+  width:56px;height:56px;border-radius:12px;
+  background: linear-gradient(135deg,#06b6d4,#4f46e5);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow: 0 8px 30px rgba(6,182,212,0.12), inset 0 -6px 16px rgba(0,0,0,0.25);
+  font-weight:700;font-size:18px;color:white;
+}
+.title h1{margin:0;font-size:18px}
+.title p{margin:0;color:var(--muted);font-size:13px}
+
+/* ---------------------------
+   CARD
+   --------------------------- */
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:18px;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+/* ---------------------------
+   TABS & CONTROLS
+   --------------------------- */
+.controls{
+  display:flex;
+  gap:8px;
+  margin-bottom:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+.mode-switch{display:flex;gap:8px}
+.switch-btn{
+  padding:8px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:600;
+  background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.02);
+}
+.switch-btn.active{
+  background:var(--accent-solid);
+  color:white;
+  box-shadow:0 8px 32px rgba(79,70,229,0.18);
+}
+
+/* ---------------------------
+   FORM
+   --------------------------- */
+.form-grid{
+  display:grid;
+  grid-template-columns: repeat(2,1fr);
+  gap:12px;
+}
+@media (max-width:600px){ .form-grid{grid-template-columns:1fr} }
+
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+select,input[type="text"],input[type="number"]{
+  width:100%;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+  color:inherit;
+  outline:none;
+}
+
+/* Primary button */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;
+  background:linear-gradient(90deg,#4f46e5,#06b6d4);
+  color:white;font-weight:700;box-shadow:0 12px 30px rgba(6,182,212,0.08);
+}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);font-weight:600}
+.small{font-size:13px;color:var(--muted)}
+
+/* ---------------------------
+   RESISTOR VISUAL (3D look)
+   --------------------------- */
+.resistor-wrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px 12px;
+}
+.resistor{
+  width:100%;
+  max-width:520px;
+  height:96px;
+  border-radius:50px;
+  position:relative;
+  padding:14px 28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(180deg,#fbf7eb 0%, #efe3c8 100%);
+  box-shadow:
+    0 18px 60px rgba(2,6,23,0.6),
+    inset 0 -12px 30px rgba(0,0,0,0.22);
+  transform-style:preserve-3d;
+  overflow:hidden;
+}
+.resistor::before, .resistor::after{
+  content:'';
+  position:absolute;
+  width:70px;height:12px;border-radius:8px;
+  background:linear-gradient(90deg,#b0b0b0,#6b6b6b);
+  left:-90px; top:50%; transform:translateY(-50%);
+  box-shadow:0 6px 20px rgba(0,0,0,0.5);
+}
+.resistor::after{ right:-90px; left:auto; transform:translateY(-50%) rotate(0deg); }
+
+/* center body shine */
+.resistor .shine{
+  position:absolute;left:0;right:0;top:0;height:50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.25), rgba(255,255,255,0.03));
+  mix-blend-mode:soft-light;pointer-events:none;
+}
+
+/* Band style */
+.band{
+  width:22px;height:78px;border-radius:6px;margin:0 8px;box-shadow: inset 0 -6px 16px rgba(0,0,0,0.25);
+  transition:transform 450ms cubic-bezier(.2,.9,.2,1), box-shadow 300ms;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(255,255,255,0.04);
+  position:relative;
+}
+.band-label{
+  position:absolute;bottom:-28px;font-size:12px;color:var(--muted);
+  white-space:nowrap;
+  transform-origin:center;
+}
+
+/* animated glow for active band */
+.band.glow{
+  transform: translateY(-6px) scale(1.04);
+  box-shadow: 0 14px 40px rgba(79,70,229,0.15), inset 0 -6px 16px rgba(0,0,0,0.32);
+}
+
+/* ---------------------------
+   RESULTS & INFO
+   --------------------------- */
+.results{
+  margin-top:12px;display:flex;flex-direction:column;gap:8px;
+}
+.result-card{
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.result-card h4{margin:0;font-size:14px}
+.result-value{font-weight:800;font-size:16px;color:#f8fafc}
+
+/* small animated counter */
+.counter{font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums;}
+
+/* ---------------------------
+   SIDE PANEL (LEGEND)
+   --------------------------- */
+.side{
+  display:flex;flex-direction:column;gap:12px;
+  align-self:flex-start;
+}
+.legend{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:8px;
+}
+.legend-item{
+  display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+  border:1px solid rgba(255,255,255,0.02);
+}
+.color-dot{
+  width:36px;height:22px;border-radius:6px;border:1px solid rgba(0,0,0,0.25);
+  flex-shrink:0;
+}
+.legend-item .txt{font-size:13px;color:var(--muted)}
+
+/* ---------------------------
+   TABLE
+   --------------------------- */
+.table-wrap{overflow:auto;border-radius:8px}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+th,td{text-align:left;padding:10px;border-bottom:1px solid rgba(255,255,255,0.03)}
+th{color:var(--muted);font-weight:700}
+
+/* ---------------------------
+   FOOTER
+   --------------------------- */
+.footer{grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px;margin-top:12px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">RC</div>
+        <div class="title">
+          <h1>Calculadora — Codi de Colors (4 bandes)</h1>
+          <p>Interfície visual i educativa · Tot en català · Fitxer autònom</p>
+        </div>
+      </div>
+      <div class="small">Versió visual — Exporta `index.html` al teu GitHub</div>
+    </div>
+
+    <!-- MAIN CARD -->
+    <div class="card">
+      <div class="controls">
+        <div class="mode-switch" role="tablist" aria-label="Modes">
+          <button id="btnModeColors" class="switch-btn active" role="tab" aria-selected="true">🎨 Colors → Valor</button>
+          <button id="btnModeValue" class="switch-btn" role="tab">🔢 Valor → Colors</button>
+          <button id="btnModeTheory" class="switch-btn" role="tab">📘 Teoria</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="small">Tema: <strong>Fosc modern</strong></div>
+          <button id="btnReset" class="switch-btn">Restableix</button>
+        </div>
+      </div>
+
+      <!-- COLORS -> VALUE -->
+      <div id="panelColors">
+        <div style="display:flex;gap:12px;flex-direction:column">
+          <div class="form-grid">
+            <div>
+              <label for="band1">1a xifra</label>
+              <select id="band1"></select>
+            </div>
+            <div>
+              <label for="band2">2a xifra</label>
+              <select id="band2"></select>
+            </div>
+            <div>
+              <label for="band3">Multiplicador</label>
+              <select id="band3"></select>
+            </div>
+            <div>
+              <label for="band4">Tolerància</label>
+              <select id="band4"></select>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button id="btnCalcColors" class="btn">Calcular</button>
+            <button id="btnToValue" class="btn ghost">Canvia a Valor → Colors</button>
+            <div class="small">Després de calcular, veureu el resistor i els resultats a sota.</div>
+          </div>
+
+          <div class="resistor-wrap card" aria-hidden="true">
+            <div class="resistor" id="resistorVisual">
+              <div class="shine"></div>
+              <!-- bands injected here -->
+            </div>
+          </div>
+
+          <div class="results" id="resultsColors">
+            <!-- result cards -->
+          </div>
+        </div>
+      </div>
+
+      <!-- VALUE -> COLORS -->
+      <div id="panelValue" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <div style="flex:1">
+              <label for="valueInput">Valor nominal</label>
+              <input id="valueInput" type="text" placeholder="Ex: 4k7, 4700, 2.2M">
+            </div>
+            <div style="width:160px">
+              <label for="toleranceSelect">Tolerància (%)</label>
+              <select id="toleranceSelect"></select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="btnCalcValue" class="btn">Calcular</button>
+              <button id="btnToColors" class="btn ghost">Canvia a Colors → Valor</button>
+            </div>
+          </div>
+
+          <div class="resistor-wrap card" aria-hidden="true">
+            <div class="resistor" id="resistorVisualValue"><div class="shine"></div></div>
+          </div>
+
+          <div class="results" id="resultsValue"></div>
+        </div>
+      </div>
+
+      <!-- THEORY PANEL -->
+      <div id="panelTheory" style="display:none">
+        <h3 style="margin-top:0">Teoria i Taula de Colors</h3>
+        <p class="small">Les resistències de 4 bandes mostren dues xifres significatives, un multiplicador i una tolerància. Fórmula:</p>
+        <p><strong>Valor nominal = (1a xifra × 10 + 2a xifra) × multiplicador</strong></p>
+        <div class="table-wrap">
+          <table id="colorTable" aria-describedby="taulaColors">
+            <thead><tr><th>Color</th><th>1a/2a xifra</th><th>Multiplicador</th><th>Tolerància</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h4>Exemples i notes</h4>
+        <ul class="small">
+          <li><strong>4k7</strong> = 4,7 kΩ = 4700 Ω. Notació habitual als manuals i etiquetes.</li>
+          <li>Si el valor no encaixa amb una combinació de 4 bandes, l'eina ho indicarà.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SIDE PANEL -->
+    <aside class="side">
+      <div class="card">
+        <h4 style="margin:0 0 8px 0">Llegenda de Colors</h4>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="card">
+        <h4 style="margin:0 0 8px 0">Sortida Ràpida</h4>
+        <div class="small" id="quickOutput">Cap càlcul encara.</div>
+      </div>
+
+      <div class="card">
+        <h4 style="margin:0 0 8px 0">Accions</h4>
+        <div style="display:flex;gap:8px;flex-direction:column">
+          <button id="btnExport" class="btn ghost">Descarrega HTML</button>
+          <button id="btnCopy" class="btn">Copia codi (portapapers)</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="footer small">Fitxer autònom · Tot en català · Sense dependències externes</div>
+  </div>
+
+<script>
+/* ============================
+   DATA
+   ============================ */
 const COLOR_CODES = {
-    Negre: { value: 0, multiplier: 1, color: '#000000' },
-    Marró: { value: 1, multiplier: 10, tolerance: 1, color: '#8B4513' },
-    Vermell: { value: 2, multiplier: 100, tolerance: 2, color: '#FF0000' },
-    Taronja: { value: 3, multiplier: 1000, color: '#FFA500' },
-    Groc: { value: 4, multiplier: 10000, color: '#FFFF00' },
-    Verd: { value: 5, multiplier: 100000, tolerance: 0.5, color: '#008000' },
-    Blau: { value: 6, multiplier: 1000000, tolerance: 0.25, color: '#0000FF' },
-    Violeta: { value: 7, tolerance: 0.1, color: '#EE82EE' },
-    Gris: { value: 8, color: '#808080' },
-    Blanc: { value: 9, color: '#F3F4F6' },
-    Or: { multiplier: 0.1, tolerance: 5, color: '#FFD700' },
-    Plata: { multiplier: 0.01, tolerance: 10, color: '#C0C0C0' },
-    'Sense color': { tolerance: 20, color: 'transparent' }
+  'Negre':   { value:0,  multiplier:1,        color:'#000000' },
+  'Marró':   { value:1,  multiplier:10,       tolerance:1,  color:'#8B4513' },
+  'Vermell': { value:2,  multiplier:100,      tolerance:2,  color:'#FF0000' },
+  'Taronja': { value:3,  multiplier:1000,     color:'#FFA500' },
+  'Groc':    { value:4,  multiplier:10000,    color:'#FFD400' },
+  'Verd':    { value:5,  multiplier:100000,   tolerance:0.5, color:'#00A86B' },
+  'Blau':    { value:6,  multiplier:1000000,  tolerance:0.25, color:'#0077FF' },
+  'Violeta': { value:7,  /*multiplier not*/ tolerance:0.1, color:'#B86BFF' },
+  'Gris':    { value:8,  color:'#808080' },
+  'Blanc':   { value:9,  color:'#F3F4F6' },
+  'Or':      { multiplier:0.1,  tolerance:5,  color:'#FFD700' },
+  'Plata':   { multiplier:0.01, tolerance:10, color:'#C0C0C0' },
+  'Sense color': { tolerance:20, color:'transparent' }
 };
+const ORDER = ['Negre','Marró','Vermell','Taronja','Groc','Verd','Blau','Violeta','Gris','Blanc','Or','Plata','Sense color'];
+const BANDS_1_2 = ['Negre','Marró','Vermell','Taronja','Groc','Verd','Blau','Violeta','Gris','Blanc'];
+const MULTS = ['Negre','Marró','Vermell','Taronja','Groc','Verd','Blau','Or','Plata'];
+const TOLS = ['Marró','Vermell','Verd','Blau','Violeta','Or','Plata','Sense color'];
 
-// Extracted lists for selectors
-const BANDS_1_2_COLORS = ['Negre', 'Marró', 'Vermell', 'Taronja', 'Groc', 'Verd', 'Blau', 'Violeta', 'Gris', 'Blanc'];
-const MULTIPLIER_COLORS = ['Negre', 'Marró', 'Vermell', 'Taronja', 'Groc', 'Verd', 'Blau', 'Or', 'Plata'];
-const TOLERANCE_COLORS = ['Marró', 'Vermell', 'Verd', 'Blau', 'Violeta', 'Or', 'Plata', 'Sense color'];
+/* ============================
+   HELPERS
+   ============================ */
+const $ = id => document.getElementById(id);
+function createEl(tag, props={}, children=[]){
+  const e = document.createElement(tag);
+  Object.assign(e, props);
+  (children||[]).forEach(c=>e.appendChild(c));
+  return e;
+}
+function formatOhms(v){
+  if (!isFinite(v)) return '—';
+  const abs=Math.abs(v);
+  if (abs>=1_000_000) return (v/1_000_000).toFixed(3).replace(/\.?0+$/,'')+' MΩ';
+  if (abs>=1000) return (v/1000).toFixed(3).replace(/\.?0+$/,'')+' kΩ';
+  return v.toFixed(2).replace(/\.00$/,'')+' Ω';
+}
+function findColorBy(type,target){
+  for(const k in COLOR_CODES){
+    const d=COLOR_CODES[k];
+    if(type==='value' && d.value===target) return k;
+    if(type==='multiplier' && d.multiplier===target) return k;
+    if(type==='tolerance' && d.tolerance===target) return k;
+  }
+  return null;
+}
 
-// Helper to get color name from value/multiplier/tolerance (for Mode 2 reverse calculation)
-const findColorByValue = (type, targetValue) => {
-    for (const [name, data] of Object.entries(COLOR_CODES)) {
-        if (type === 'value' && data.value === targetValue) return name;
-        if (type === 'multiplier' && data.multiplier === targetValue) return name;
-        if (type === 'tolerance' && data.tolerance === targetValue) return name;
+/* parse inputs like 4k7, 4.7k, 4700, 2.2M */
+function parseNominalInput(s){
+  if(!s) return NaN;
+  let t=String(s).trim().toLowerCase().replace(',', '.');
+  // compact like 4k7 -> 4.7k
+  const mk = t.match(/^(\d+)[k]([0-9])$/);
+  if(mk) t = mk[1]+'.'+mk[2]+'k';
+  const mm = t.match(/^(\d+)[m]([0-9])$/);
+  if(mm) t = mm[1]+'.'+mm[2]+'m';
+  if(t.endsWith('k')) return parseFloat(t.slice(0,-1))*1000;
+  if(t.endsWith('m')) return parseFloat(t.slice(0,-1))*1000000;
+  const n=parseFloat(t);
+  return isNaN(n)?NaN:n;
+}
+
+/* find bands from value */
+function findBandsFromValue(target){
+  if(!(target>0)) return {error:'Valor no vàlid'};
+  const mulVals = MULTS.map(c=>COLOR_CODES[c].multiplier).filter(x=>x!==undefined).sort((a,b)=>b-a);
+  for(const mul of mulVals){
+    const core = target/mul;
+    if(core>=10 && core<100){
+      const rounded = Math.round(core);
+      if(rounded<10||rounded>99) continue;
+      const b1=Math.floor(rounded/10);
+      const b2=rounded%10;
+      const band1=findColorBy('value',b1);
+      const band2=findColorBy('value',b2);
+      const band3=findColorBy('multiplier',mul);
+      if(band1 && band2 && band3) return {band1,band2,band3,coreRounded:rounded};
     }
-    return null;
-};
+  }
+  return {error:"No s'ha trobat una combinació de 4 bandes per a aquest valor."};
+}
 
-// Utility function to format resistance value with K/M notation (based on image examples)
-const formatResistance = (value) => {
-    if (value === 0) return '$0 \\, \\Omega$';
-    const absValue = Math.abs(value);
-    
-    // Check for kΩ format (e.g., 4k7) - Only suitable for values where the first two digits are used
-    if (absValue >= 1000 && absValue < 10000) {
-        // Check if it can be represented as X.Xk
-        const coreValue = absValue / 1000;
-        const integerPart = Math.floor(coreValue);
-        const decimalPart = Math.round((coreValue - integerPart) * 10);
-        if (decimalPart === 0) {
-             return `$${integerPart}\\text{k} \\, \\Omega$`;
-        } else {
-             return `$${integerPart}\\text{k}${decimalPart} \\, \\Omega$`;
-        }
-    }
-    
-    // Standard notation
-    if (absValue >= 1000000) return `$${(value / 1000000).toFixed(2)}\\text{M} \\, \\Omega$`;
-    if (absValue >= 1000) return `$${(value / 1000).toFixed(2)}\\text{k} \\, \\Omega$`;
-    return `$${value.toFixed(2).replace(/\.00$/, '')} \\, \\Omega$`;
-};
+/* animate counter */
+function animateCounter(el, from, to, duration=700){
+  const start = performance.now();
+  const step = (now)=>{
+    const t = Math.min(1,(now-start)/duration);
+    const val = from + (to-from)*t;
+    el.textContent = val>=1000?formatOhms(Math.round(val)):formatOhms(val);
+    if(t<1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 
+/* ============================
+   UI INIT
+   ============================ */
+function populateSelect(selectEl, arr){
+  selectEl.innerHTML='';
+  arr.forEach(name=>{
+    const opt=document.createElement('option'); opt.value=name; opt.textContent=name;
+    selectEl.appendChild(opt);
+  });
+}
+populateSelect($('band1'), BANDS_1_2);
+populateSelect($('band2'), BANDS_1_2);
+populateSelect($('band3'), MULTS);
+populateSelect($('band4'), TOLS);
+populateSelect($('toleranceSelect'), TOLS);
 
-// --- Resistor Visualization Component ---
-const Resistor = ({ bands }) => {
-    const bandColors = bands.map(name => {
-        if (name === 'Blanc') return '#F3F4F6'; // Use light grey for visual contrast
-        if (name === 'Sense color') return 'transparent';
-        return COLOR_CODES[name]?.color || 'transparent';
-    });
+function buildLegend(){
+  const legend = document.getElementById('legend');
+  ORDER.forEach(name=>{
+    const item = createEl('div',{className:'legend-item'});
+    const dot = createEl('div',{className:'color-dot'});
+    dot.style.background = COLOR_CODES[name].color || 'transparent';
+    const txt = createEl('div',{className:'txt'},[]);
+    txt.textContent = name;
+    item.appendChild(dot); item.appendChild(txt);
+    legend.appendChild(item);
+  });
+}
+buildLegend();
 
-    return (
-        <div className="flex justify-center items-center py-4">
-            <div className="h-4 w-4 bg-gray-500 rounded-l-full"></div>
-            <div className="flex items-center h-8 w-48 md:w-64 bg-[#F0F0F0] border-2 border-gray-400 rounded-full shadow-inner relative">
-                {/* Resistor Body */}
-                <div className="absolute inset-0 rounded-full bg-gray-200 shadow-inner"></div>
+function buildColorTable(){
+  const tbody = document.querySelector('#colorTable tbody');
+  ORDER.forEach(name=>{
+    const d = COLOR_CODES[name]||{};
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td'); td1.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><span style="width:36px;height:18px;border-radius:6px;background:${d.color||'transparent'};display:inline-block;border:1px solid rgba(0,0,0,0.2)"></span>${name}</div>`;
+    const td2 = document.createElement('td'); td2.textContent = d.value!==undefined?d.value:'-';
+    const td3 = document.createElement('td'); td3.textContent = d.multiplier!==undefined?('×'+d.multiplier):'-';
+    const td4 = document.createElement('td'); td4.textContent = d.tolerance!==undefined?('±'+d.tolerance+'%'):'-';
+    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+    tbody.appendChild(tr);
+  });
+}
+buildColorTable();
 
-                {/* Bands (4-band resistor layout) */}
-                {bandColors.map((color, index) => (
-                    <div 
-                        key={index} 
-                        style={{ backgroundColor: color, opacity: color === 'transparent' ? 0.3 : 1 }}
-                        className={`h-full absolute w-3 md:w-4 shadow-md rounded-sm ${index === 3 ? 'right-2' : ''}`}
-                        title={bands[index]}
-                        // Positioning based on 4-band standard
-                        // Band 1: left, Band 2: near 1, Band 3: Multiplier, Band 4: Tolerance (far right)
-                        css={{
-                            ...(index === 0 && { left: '10%' }),
-                            ...(index === 1 && { left: '20%' }),
-                            ...(index === 2 && { left: '30%' }),
-                            ...(index === 3 && { right: '10%' }),
-                        }}
-                    >
-                        {/* Placeholder text for 'Sense color' band 4 */}
-                        {bands[index] === 'Sense color' && (
-                            <span className="absolute inset-0 flex items-center justify-center text-xs text-gray-800 font-bold opacity-10">20%</span>
-                        )}
-                    </div>
-                ))}
-            </div>
-            <div className="h-4 w-4 bg-gray-500 rounded-r-full"></div>
-        </div>
-    );
-};
+/* ============================
+   RENDER RESISTOR
+   ============================ */
+function createBandDiv(colorName,label){
+  const d = document.createElement('div');
+  d.className='band';
+  const c = COLOR_CODES[colorName] ? COLOR_CODES[colorName].color : 'transparent';
+  d.style.background = c === 'transparent' ? 'linear-gradient(180deg, rgba(0,0,0,0.06), rgba(255,255,255,0.02))' : c;
+  if(c === '#FFD400' || c === '#F3F4F6') d.style.border = '1px solid rgba(0,0,0,0.25)';
+  const lbl = document.createElement('div'); lbl.className='band-label'; lbl.textContent = label||'';
+  d.appendChild(lbl);
+  return d;
+}
 
+function renderResistor(containerId, bands, labels){
+  const container = $(containerId);
+  container.innerHTML='';
+  const spacer = document.createElement('div'); spacer.style.width='20px';
+  const wrapper = document.createElement('div'); wrapper.style.display='flex'; wrapper.style.alignItems='center'; wrapper.style.justifyContent='center';
+  wrapper.style.gap='8px';
+  bands.forEach((b,i)=>{
+    const bd = createBandDiv(b, labels && labels[i] ? labels[i] : b);
+    // add glow class briefly
+    bd.classList.add('glow');
+    wrapper.appendChild(bd);
+    setTimeout(()=>bd.classList.remove('glow'),600);
+  });
+  container.appendChild(wrapper);
+}
 
-// --- Selector Component ---
-const ColorSelector = ({ label, colors, selectedColor, onChange, positionClass }) => {
-    const colorHex = COLOR_CODES[selectedColor]?.color || '#FFFFFF';
-    const isLight = colorHex.toLowerCase() === '#f3f4f6' || colorHex.toLowerCase() === '#ffff00' || colorHex === 'transparent';
+/* ============================
+   CALCULATIONS
+   ============================ */
+function calculateFromColors(){
+  const b1 = $('band1').value;
+  const b2 = $('band2').value;
+  const b3 = $('band3').value;
+  const b4 = $('band4').value;
+  const out = $('resultsColors'); out.innerHTML='';
+  if(!b1 || !b2 || !b3 || !b4){
+    out.innerHTML = '<div class="result-card">Selecciona tots els colors per calcular.</div>';
+    return;
+  }
+  const v1 = COLOR_CODES[b1].value;
+  const v2 = COLOR_CODES[b2].value;
+  const mul = COLOR_CODES[b3].multiplier;
+  const tol = COLOR_CODES[b4].tolerance;
+  if(v1===undefined||v2===undefined||mul===undefined||tol===undefined){
+    out.innerHTML = '<div class="result-card">Selecció incompleta o color no vàlid.</div>';
+    return;
+  }
+  const firstTwo = (v1*10)+v2;
+  const nominal = firstTwo * mul;
+  const tolValue = nominal * (tol/100);
+  const min = nominal - tolValue;
+  const max = nominal + tolValue;
 
-    return (
-        <div className="flex flex-col items-start space-y-1">
-            <label className="text-sm font-medium text-gray-700">{label}</label>
-            <div className="relative w-full">
-                <select
-                    className={`block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md appearance-none border-2 transition-colors duration-150`}
-                    style={{ 
-                        backgroundColor: colorHex === 'transparent' ? '#EEEEEE' : colorHex,
-                        color: isLight || selectedColor === 'Sense color' ? '#1F2937' : '#FFFFFF', // Dark text for light backgrounds
-                        border: selectedColor === 'Blanc' || selectedColor === 'Sense color' ? '2px solid #D1D5DB' : 'none'
-                    }}
-                    value={selectedColor}
-                    onChange={(e) => onChange(e.target.value)}
-                >
-                    <option value="" disabled className="bg-white text-gray-900">Selecciona un color</option>
-                    {colors.map(color => (
-                        <option 
-                            key={color} 
-                            value={color}
-                            className="bg-white text-gray-900"
-                            disabled={positionClass === 'B1' && color === 'Negre'} // B1 can't be Negre
-                        >
-                            {color}
-                        </option>
-                    ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                    <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                </div>
-            </div>
-        </div>
-    );
-};
+  // results
+  out.appendChild(Object.assign(document.createElement('div'),{className:'result-card',innerHTML:`<div><h4>Valor nominal</h4><div class="small">Calculat a partir de les bandes</div></div><div class="result-value counter" id="nominalVal">—</div>`}));
+  out.appendChild(Object.assign(document.createElement('div'),{className:'result-card',innerHTML:`<div><h4>Tolerància</h4><div class="small">Percentatge i valor absolut</div></div><div class="result-value">± ${tol}% — ${formatOhms(tolValue)}</div>`}));
+  out.appendChild(Object.assign(document.createElement('div'),{className:'result-card',innerHTML:`<div><h4>Rang</h4><div class="small">Mínim / Màxim</div></div><div class="result-value">${formatOhms(min)} / ${formatOhms(max)}</div>`}));
 
-// --- Main Application Component ---
-const App = () => {
-    const [mode, setMode] = useState('colorsToValue'); // 'colorsToValue' or 'valueToColors'
-    const [activeTab, setActiveTab] = useState('calculator'); // 'calculator' or 'info'
-    
-    // State for Mode 1: Colors to Value
-    const [band1, setBand1] = useState('Marró');
-    const [band2, setBand2] = useState('Negre');
-    const [band3, setBand3] = useState('Vermell'); // Multiplier
-    const [band4, setBand4] = useState('Or');    // Tolerance
+  // animate nominal value
+  const nominalEl = document.getElementById('nominalVal');
+  animateCounter(nominalEl, 0, nominal, 700);
 
-    // State for Mode 2: Value to Colors
-    const [nominalValueInput, setNominalValueInput] = useState('4k7');
-    const [toleranceInput, setToleranceInput] = useState(5);
-    const [reverseResult, setReverseResult] = useState({ band1: 'Groc', band2: 'Violeta', band3: 'Vermell', band4: 'Or', status: 'ready' }); // Initial state
+  // render resistor visual
+  renderResistor('resistorVisual', [b1,b2,b3,b4], ['1a','2a','x','tol']);
 
-    // --- Mode 1 Logic: Colors to Value Calculation ---
-    const calculationResult = useMemo(() => {
-        const B1 = COLOR_CODES[band1]?.value;
-        const B2 = COLOR_CODES[band2]?.value;
-        const M = COLOR_CODES[band3]?.multiplier;
-        const T = COLOR_CODES[band4]?.tolerance;
+  // quick output
+  $('quickOutput').textContent = `${formatOhms(nominal)} (±${tol}%) — ${b1}, ${b2}, ${b3}, ${b4}`;
+}
 
-        if (B1 === undefined || B2 === undefined || M === undefined || T === undefined) {
-            return null; // Not enough data selected
-        }
-        
-        // Formula: Valor Nominal = (1a xifra * 10 + 2a xifra) * Multiplicador
-        const V_nominal = (B1 * 10 + B2) * M;
-        const V_tolerance = V_nominal * (T / 100);
-        const V_min = V_nominal - V_tolerance;
-        const V_max = V_nominal + V_tolerance;
+$('btnCalcColors').addEventListener('click', calculateFromColors);
 
-        return {
-            nominal: V_nominal,
-            tolerance_percent: T,
-            tolerance_value: V_tolerance,
-            min: V_min,
-            max: V_max,
-        };
-    }, [band1, band2, band3, band4]);
+/* VALUE -> COLORS */
+function calculateFromValue(){
+  const raw = $('valueInput').value;
+  const tolSel = $('toleranceSelect').value;
+  const out = $('resultsValue'); out.innerHTML='';
+  if(!raw){
+    out.innerHTML = '<div class="result-card">Introdueix un valor.</div>';
+    return;
+  }
+  if(!tolSel){
+    out.innerHTML = '<div class="result-card">Selecciona una tolerància.</div>';
+    return;
+  }
+  const nominal = parseNominalInput(raw);
+  if(!nominal || isNaN(nominal) || nominal<=0){
+    out.innerHTML = '<div class="result-card">Valor nominal invàlid. Exemple vàlid: 4k7, 4700, 2.2M</div>';
+    return;
+  }
+  const found = findBandsFromValue(nominal);
+  if(found.error){
+    out.innerHTML = `<div class="result-card">${found.error}</div>`;
+    return;
+  }
+  const band1 = found.band1;
+  const band2 = found.band2;
+  const band3 = found.band3;
+  const band4 = tolSel;
 
-    // --- Mode 2 Logic: Value to Colors Calculation ---
-    const handleCalculateColors = () => {
-        setReverseResult({ status: 'calculating' });
-        let inputValString = nominalValueInput.toLowerCase().trim().replace(/ /g, '');
-        let V_target = 0;
-        
-        // 1. Handle k/M notation (based on image examples like 2.2k or 4k7)
-        try {
-            if (inputValString.includes('k')) {
-                inputValString = inputValString.replace('k', '.');
-                V_target = parseFloat(inputValString) * 1000;
-            } else if (inputValString.includes('m')) {
-                inputValString = inputValString.replace('m', '.');
-                V_target = parseFloat(inputValString) * 1000000;
-            } else {
-                V_target = parseFloat(nominalValueInput);
-            }
-        } catch (error) {
-            setReverseResult({ status: 'error', message: 'Valor Nominal invàlid.' });
-            return;
-        }
+  out.appendChild(Object.assign(document.createElement('div'),{className:'result-card',innerHTML:`<div><h4>Colors</h4><div class="small">Bandes calculades</div></div><div class="result-value">${band1} · ${band2} · ${band3} · ${band4}</div>`}));
+  out.appendChild(Object.assign(document.createElement('div'),{className:'result-card',innerHTML:`<div><h4>Interpretació</h4><div class="small">Càlcul intern</div></div><div class="result-value">${Math.floor(found.coreRounded/10)} ${found.coreRounded%10} × ${COLOR_CODES[band3].multiplier} = ${formatOhms(Math.round(found.coreRounded*COLOR_CODES[band3].multiplier))}</div>`}));
 
-        if (isNaN(V_target) || V_target <= 0) {
-            setReverseResult({ status: 'error', message: 'El valor nominal ha de ser un número positiu.' });
-            return;
-        }
-        
-        // Find the color for the tolerance band
-        const toleranceColorName = findColorByValue('tolerance', toleranceInput);
-        if (!toleranceColorName) {
-            setReverseResult({ status: 'error', message: 'Tolerància no suportada.' });
-            return;
-        }
+  renderResistor('resistorVisualValue',[band1,band2,band3,band4], ['1a','2a','x','tol']);
+  $('quickOutput').textContent = `${band1}, ${band2}, ${band3}, ${band4} → ${formatOhms(nominal)} (± ${COLOR_CODES[band4].tolerance}% )`;
+}
+$('btnCalcValue').addEventListener('click', calculateFromValue);
 
-        // 2. Find the best multiplier (M)
-        let bestMultiplier = null;
-        let band3Color = null;
-        let coreValue = null;
+/* ============================
+   MODE SWITCHING, RESET, EXPORT
+   ============================ */
+function showPanel(panel){
+  $('panelColors').style.display = panel==='colors'?'block':'none';
+  $('panelValue').style.display = panel==='value'?'block':'none';
+  $('panelTheory').style.display = panel==='theory'?'block':'none';
+  ['btnModeColors','btnModeValue','btnModeTheory'].forEach(id=>$(id).classList.remove('active'));
+  if(panel==='colors') $('btnModeColors').classList.add('active');
+  if(panel==='value') $('btnModeValue').classList.add('active');
+  if(panel==='theory') $('btnModeTheory').classList.add('active');
+}
+$('btnModeColors').addEventListener('click',()=>showPanel('colors'));
+$('btnModeValue').addEventListener('click',()=>showPanel('value'));
+$('btnModeTheory').addEventListener('click',()=>showPanel('theory'));
 
-        // Iterate through all multiplier values (from largest to smallest)
-        const multipliers = MULTIPLIER_COLORS.map(c => COLOR_CODES[c].multiplier).sort((a, b) => b - a);
+$('btnReset').addEventListener('click',()=>{
+  $('band1').value='Groc'; $('band2').value='Violeta'; $('band3').value='Taronja'; $('band4').value='Or';
+  $('valueInput').value='4k7'; $('toleranceSelect').value='Or';
+  calculateFromColors();
+});
 
-        for (const M of multipliers) {
-            const currentCore = V_target / M;
-            // The core value (B1 * 10 + B2) must be between 10 and 99 (inclusive of 10-99.99 for rounding)
-            if (currentCore >= 10 && currentCore < 100) {
-                 // Check if the core value results in two valid digits after rounding
-                const roundedCore = Math.round(currentCore);
-                const B1_val = Math.floor(roundedCore / 10);
-                const B2_val = roundedCore % 10;
-                
-                if (B1_val >= 1 && B1_val <= 9 && B2_val >= 0 && B2_val <= 9) {
-                    bestMultiplier = M;
-                    coreValue = roundedCore;
-                    band3Color = findColorByValue('multiplier', M);
-                    break; // Found the best fit (largest M that works)
-                }
-            }
-        }
+/* fill default and calculate */
+$('band1').value='Groc'; $('band2').value='Violeta'; $('band3').value='Taronja'; $('band4').value='Or';
+$('valueInput').value='4k7'; $('toleranceSelect').value='Or';
+calculateFromColors();
 
-        if (bestMultiplier === null) {
-            setReverseResult({ status: 'error', message: 'No s\'ha trobat una combinació de 4 bandes per a aquest valor.' });
-            return;
-        }
+/* populate tolerance select with label names */
+TOLS.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent = t; $('toleranceSelect').appendChild(o); });
 
-        // 3. Calculate Band 1 and Band 2
-        const B1_val = Math.floor(coreValue / 10);
-        const B2_val = coreValue % 10;
-        
-        const band1Color = findColorByValue('value', B1_val);
-        const band2Color = findColorByValue('value', B2_val);
+/* export: download the current HTML page as file */
+$('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([document.documentElement.outerHTML], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'index.html';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
 
-        if (!band1Color || !band2Color || !band3Color) {
-             setReverseResult({ status: 'error', message: 'Error de color al descomposar el valor.' });
-             return;
-        }
-
-        setReverseResult({
-            status: 'success',
-            band1: band1Color, 
-            band2: band2Color,
-            band3: band3Color,
-            band4: toleranceColorName
-        });
-    };
-
-    // --- Tab Content Renderers ---
-
-    const renderCalculator = () => (
-        <div className="p-6 bg-white rounded-xl shadow-2xl transition-all duration-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <Settings className="w-6 h-6 mr-2 text-blue-600" />
-                Calculadora de Resistors (4 Bandes)
-            </h2>
-            <div className="flex justify-center mb-6">
-                <button
-                    onClick={() => setMode(mode === 'colorsToValue' ? 'valueToColors' : 'colorsToValue')}
-                    className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-xl transition duration-200 transform hover:scale-105"
-                >
-                    <ArrowRightLeft className="w-5 h-5 mr-2" />
-                    Canviar Mode: {mode === 'colorsToValue' ? 'Valor a Colors' : 'Colors a Valor'}
-                </button>
-            </div>
-
-            <Resistor bands={mode === 'colorsToValue' ? [band1, band2, band3, band4] : [reverseResult.band1, reverseResult.band2, reverseResult.band3, reverseResult.band4]} />
-
-            {/* Mode 1: Colors to Value UI */}
-            {mode === 'colorsToValue' && (
-                <div className="mt-8">
-                    <h3 className="text-xl font-semibold mb-4 border-b pb-2 text-gray-700">Colors a Valor (Càlcul $\Omega$)</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                        <ColorSelector label="Banda 1 (1a Xifra)" colors={BANDS_1_2_COLORS.filter(c => c !== 'Negre')} selectedColor={band1} onChange={setBand1} positionClass="B1" />
-                        <ColorSelector label="Banda 2 (2a Xifra)" colors={BANDS_1_2_COLORS} selectedColor={band2} onChange={setBand2} />
-                        <ColorSelector label="Banda 3 (Multiplicador)" colors={MULTIPLIER_COLORS} selectedColor={band3} onChange={setBand3} />
-                        <ColorSelector label="Banda 4 (Tolerància)" colors={TOLERANCE_COLORS} selectedColor={band4} onChange={setBand4} />
-                    </div>
-
-                    {calculationResult ? (
-                        <div className="mt-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg shadow-inner">
-                            <h4 className="text-lg font-bold text-green-800 flex items-center"><CheckCircle className="w-5 h-5 mr-2" /> Resultats del Càlcul</h4>
-                            <div className="mt-2 space-y-2">
-                                <p className="text-gray-700">**Valor Nominal:** <span className="font-mono text-xl text-green-600">{formatResistance(calculationResult.nominal)}</span></p>
-                                <p className="text-gray-700">**Tolerància:** $\pm {calculationResult.tolerance_percent}\\%$ ($\pm {formatResistance(calculationResult.tolerance_value)}$)</p>
-                                <p className="text-gray-700">**Valor Mínim:** {formatResistance(calculationResult.min)}</p>
-                                <p className="text-gray-700">**Valor Màxim:** {formatResistance(calculationResult.max)}</p>
-                            </div>
-                        </div>
-                    ) : (
-                         <div className="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
-                            <p className="text-yellow-800">Selecciona tots els colors per calcular el valor del resistor.</p>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Mode 2: Value to Colors UI */}
-            {mode === 'valueToColors' && (
-                <div className="mt-8">
-                    <h3 className="text-xl font-semibold mb-4 border-b pb-2 text-gray-700">Valor a Colors (Càlcul de Bandes)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div className="flex flex-col space-y-1">
-                            <label className="text-sm font-medium text-gray-700">Valor Nominal (Ex: $4.700$, $4\text{k}7$)</label>
-                            <input
-                                type="text"
-                                className="px-3 py-2 border-2 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition-shadow duration-150"
-                                value={nominalValueInput}
-                                onChange={(e) => setNominalValueInput(e.target.value)}
-                                placeholder="4700 o 4k7"
-                            />
-                        </div>
-                        <div className="flex flex-col space-y-1">
-                            <label className="text-sm font-medium text-gray-700">Tolerància ($\%$)</label>
-                            <select
-                                className="px-3 py-2 border-2 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 appearance-none transition-shadow duration-150"
-                                value={toleranceInput}
-                                onChange={(e) => setToleranceInput(parseFloat(e.target.value))}
-                            >
-                                {TOLERANCE_COLORS.map(color => {
-                                    const tol = COLOR_CODES[color].tolerance;
-                                    return tol ? <option key={tol} value={tol}>$\pm {tol}\\%$ ({color})</option> : null;
-                                })}
-                            </select>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={handleCalculateColors}
-                        disabled={reverseResult.status === 'calculating'}
-                        className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-teal-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200 transform hover:scale-[1.01] disabled:opacity-50 flex items-center justify-center"
-                    >
-                        {reverseResult.status === 'calculating' ? (
-                            <span className="flex items-center"><Code className="w-5 h-5 mr-2 animate-pulse" /> Calculant...</span>
-                        ) : (
-                            <span className="flex items-center"><Code className="w-5 h-5 mr-2" /> Calcular Colors</span>
-                        )}
-                    </button>
-                    
-                    {reverseResult.status === 'success' && (
-                        <div className="mt-6 p-4 bg-teal-50 border-l-4 border-teal-500 rounded-lg shadow-inner">
-                            <h4 className="text-lg font-bold text-teal-800 flex items-center"><CheckCircle className="w-5 h-5 mr-2" /> Colors Resultants</h4>
-                            <p className="mt-2 text-gray-700">
-                                **B1:** {reverseResult.band1} | **B2:** {reverseResult.band2} | **B3 (Multiplicador):** {reverseResult.band3} | **B4 (Tolerància):** {reverseResult.band4}
-                            </p>
-                        </div>
-                    )}
-                    {reverseResult.status === 'error' && (
-                         <div className="mt-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-inner">
-                            <h4 className="text-lg font-bold text-red-800 flex items-center"><XCircle className="w-5 h-5 mr-2" /> Error de Càlcul</h4>
-                            <p className="mt-2 text-red-700">{reverseResult.message}</p>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-
-    const renderInfo = () => (
-        <div className="p-6 bg-white rounded-xl shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <Info className="w-6 h-6 mr-2 text-blue-600" />
-                Teoria i Taula de Codi de Colors
-            </h2>
-            
-            <div className="space-y-4 text-gray-700 mb-6 border-b pb-4">
-                <h3 className="text-xl font-semibold">Resistència</h3>
-                <p>
-                    Les resistències tenen com a missió limitar el pas del corrent per un circuit. 
-                    Les més comunes estan formades per carboni (que és un mal conductor de l'electricitat) recobertes d'un material ceràmic. 
-                    El valor de les resistències es mesura en ohms $(\\Omega)$. Si el valor és elevat, es pot expressar amb diferents notacions:
-                </p>
-                <div className="bg-gray-100 p-3 rounded-lg font-mono text-sm">
-                    <p className="font-bold mb-1">EXEMPLES DE NOMENCLATURES DE RESISTÈNCIES</p>
-                    <ul className="list-disc list-inside ml-2">
-                        {/* Fix: Using string literals and double backslashes to correctly escape LaTeX commands like \text{k} and \Omega */}
-                        <li>{'$2.200 \\, \\Omega = 2,2 \\, \\text{k}\\Omega = 2\\text{k}2$'}</li>
-                        <li>{'$4.700 \\, \\Omega = 4,7 \\, \\text{k}\\Omega = 4\\text{k}7$'}</li>
-                    </ul>
-                </div>
-                <p>
-                    Podem identificar el valor de les resistències per uns **anells de colors** que tenen pintats. Normalment, una resistència té quatre anells o bandes de colors. L'últim dels quals acostuma a ser daurat o platejat.
-                </p>
-            </div>
-
-            <h3 className="text-xl font-semibold mb-3 text-gray-700">CODI DE COLORS PER A RESISTÈNCIES (Taula Oficial)</h3>
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ordre</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">1a xifra</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">2a xifra</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Multiplicador</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tolerància</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {Object.entries(COLOR_CODES).slice(0, 12).map(([colorName, data]) => (
-                            <tr key={colorName} className="hover:bg-gray-50 transition-colors">
-                                <td className={`px-6 py-2 whitespace-nowrap text-sm font-medium ${data.color === '#000000' ? 'text-white bg-black' : (data.color === '#F3F4F6' ? 'text-gray-900 bg-gray-100' : 'text-gray-900')}`} style={{ backgroundColor: data.color, color: data.color === '#FFFF00' || data.color === '#F3F4F6' ? '#1F2937' : (data.color === '#000000' ? '#FFFFFF' : '#1F2937') }}>
-                                    {colorName}
-                                </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900 font-mono">{data.value !== undefined ? data.value : '-'}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900 font-mono">{data.value !== undefined ? data.value : '-'}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900 font-mono">
-                                    {/* Fix: Using template literals with double backslashes for all LaTeX commands for robustness */}
-                                    {data.multiplier !== undefined ? (
-                                        data.multiplier === 1 ? '$\\times 1$' : 
-                                        data.multiplier < 1 ? `$$\\times ${data.multiplier}$$` : 
-                                        `$$\\times 10^{${Math.log10(data.multiplier)}}$$`
-                                    ) : '-'}
-                                </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900 font-mono">{data.tolerance !== undefined ? `$\\pm ${data.tolerance}\\%$` : '-'}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            
-            <p className="mt-4 text-xs text-gray-500">Nota: S'utilitza la notació LaTeX per a les unitats i fórmules matemàtiques, tal com es demana.</p>
-
-        </div>
-    );
-
-
-    return (
-        <div className="min-h-screen bg-gray-100 p-4 md:p-8 font-sans">
-            <header className="text-center mb-6">
-                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">
-                    Resistor Color Code App
-                </h1>
-                <p className="text-gray-600 mt-1">Eina Interactiva de Càlcul de Resistors de 4 Bandes</p>
-            </header>
-
-            {/* Tab Navigation */}
-            <div className="flex justify-center mb-6">
-                <div className="flex space-x-2 p-1 bg-white rounded-xl shadow-lg">
-                    <button
-                        onClick={() => setActiveTab('calculator')}
-                        className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${activeTab === 'calculator' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}
-                    >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Calculadora
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('info')}
-                        className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${activeTab === 'info' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}
-                    >
-                        <Info className="w-4 h-4 mr-2" />
-                        Teoria i Taula
-                    </button>
-                </div>
-            </div>
-
-            <main className="max-w-4xl mx-auto">
-                {activeTab === 'calculator' ? renderCalculator() : renderInfo()}
-            </main>
-
-            <footer className="text-center mt-8 text-xs text-gray-500">
-                Creat amb React i Tailwind CSS. Dades basades exclusivament en la documentació del resistor proporcionada.
-            </footer>
-        </div>
-    );
-};
-
-export default App;
+/* copy to clipboard */
+$('btnCopy').addEventListener('click', async ()=>{
+  try{
+    await navigator.clipboard.writeText(document.documentElement.outerHTML);
+    alert('Codi HTML copiat al portapapers!');
+  }catch(e){
+    alert('No s\'ha pogut copiar. Descarrega el fitxer.');
+  }
+});
+</script>
+</body>
+</html>
